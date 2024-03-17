@@ -26,8 +26,10 @@ use tokio::time;
 struct Args {
     #[arg(short, long, default_value_t = 8766)]
     port: u16,
-    #[arg(short, long, default_value_t = String::from("decks"))]
+    #[arg(short, long)]
     target_directory: String,
+    #[arg(short, long, default_value_t = 60000)]
+    exit_timer: u32,
 }
 
 #[derive(Clone)]
@@ -36,7 +38,6 @@ struct AppState {}
 static mut FILE_LIST: Mutex<Vec<String>> = Mutex::const_new(Vec::new());
 
 async fn my_middleware<B>(State(_state): State<AppState>, request: Request<B>) -> Request<B> {
-    // do something with `state` and `request`...
     let mut locked = unsafe { FILE_LIST.lock().await };
 
     debug!("Current list: {:?}", locked);
@@ -129,6 +130,7 @@ async fn main() {
 
             let locked = unsafe { FILE_LIST.lock().await };
             if locked.is_empty() {
+                thread::sleep(time::Duration::from_millis(args.exit_timer.into()));
                 info!("Downloaded all files");
                 break;
             }
